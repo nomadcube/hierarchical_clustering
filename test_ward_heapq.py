@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from ward_heapq import Node, HierarchicalTree, ClusterForest, Pair
+from ward_heapq import Node, HierarchicalTree, Pair
 
 
 class TestPair:
@@ -57,7 +57,7 @@ class TestHierarchicalTree:
         ht = HierarchicalTree(all_data)
         i = 2 + 0
         j = 2 + 1
-        w = ht._all_possible_nodes[i].ward(ht._all_possible_nodes[j])
+        w = ht._all_node[i].ward(ht._all_node[j])
         assert isinstance(w, float)
         assert w == 0.5
 
@@ -69,10 +69,3 @@ class TestHierarchicalTree:
         assert merge_pair.i == 2
         assert merge_pair.j == 3
         assert merge_pair.val == 0.5
-
-
-class TestClusterForest:
-    def test_init(self):
-        all_data = [np.array([k, k ** 2]) for k in range(3)]
-        cf = ClusterForest(all_data)
-        assert cf.size() == 3
