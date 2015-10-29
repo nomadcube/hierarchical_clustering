@@ -5,35 +5,59 @@ import numpy as np
 
 
 class Pair:
+    """Represent a pair of tree nodes."""
+
     def __init__(self, i, j, val):
+        """
+        Parameter i and j means index of these two nodes.
+        Parameter val means the value of WARD(node_i, node_j).
+        """
         self.i = i
         self.j = j
         self.val = val
 
     def __lt__(self, other):
+        """Redefine __lt__ function for heapify."""
         return self.val < other.val
 
 
 class Node:
-    def __init__(self, element, left=None, right=None, original_sample_index=list(), is_used=False):
+    """Represent one Node in Hierarchical Tree."""
+
+    def __init__(self, element, left=None, right=None, containing_original_sample_index=None, is_used=False):
+        """
+        :param element: Index in all sample data of this node itself.
+        :param left: Index of its left child.
+        :param right: Index of its right child.
+        :param containing_original_sample_index: All leaf index contained by this node.
+        :param is_used: Determine if this node has been contained by some other node.
+        """
+        if not isinstance(element, int):
+            raise TypeError('Element must be of Type int.')
         self.element = element
         self.left = left
         self.right = right
-        self.original_sample_index = original_sample_index
+        if not isinstance(containing_original_sample_index, list):
+            raise TypeError('Original sample index must be of Type list.')
+        self.containing_original_sample_index = containing_original_sample_index
         self.is_used = is_used
 
     def combine(self, other):
-        combined_list = deepcopy(self.original_sample_index)
-        combined_list.extend(other.original_sample_index)
+        """Union all leaf index contained by two node together."""
+        combined_list = deepcopy(self.containing_original_sample_index)
+        combined_list.extend(other.containing_original_sample_index)
         return combined_list
 
-    def variance(self, selected_sample_index=None):
+    def variance(self, all_sample, selected_sample_index=None):
+        # todo: too ugly, needs modifying.
         if selected_sample_index is None:
-            sample_data = self.original_sample_index
+            if self.containing_original_sample_index is None:
+                return 0.0
+            else:
+                sample_data = np.array([all_sample[_] for _ in self.containing_original_sample_index])
         else:
-            sample_data = [self.original_sample_index[i] for i in range(len(self.original_sample_index)) if
-                           i in selected_sample_index]
-        sample_data = np.array(sample_data).reshape((len(selected_sample_index), -1))
+            sample_data = [all_sample[i] for i in selected_sample_index]
+            sample_data = np.array(sample_data).reshape((len(selected_sample_index), -1))
         if sample_data.ndim == 1:
             return 0.0
         else:
@@ -47,9 +71,10 @@ class Node:
                 tmp_variance += sum((sample - sample_average) ** 2)
             return tmp_variance / float(n)
 
-    def ward(self, other):
+    def ward(self, other, original_sample):
         combined_list = self.combine(other)
-        ward = self.variance(combined_list) - (self.variance() + other.variance())
+        ward = self.variance(combined_list, original_sample) - (
+        self.variance(original_sample) + other.variance(original_sample))
         new_pair = Pair(self.element, other.element, ward)
         return new_pair
 
@@ -61,8 +86,9 @@ class HierarchicalTree:
         self._ward_heap_list = []
         for i in range(sample_size):
             for j in range(i + 1, sample_size):
-                self._ward_heap_list.append(Pair(i, j, self._all_node[i].ward(self._all_node[j])))
+                self._ward_heap_list.append(Pair(i, j, self._all_node[i].ward(self._all_node[j], self.original_sample)))
         heapify(self._ward_heap_list)
+
 
     def select_two_node(self):
         selected_pair = heappop(self._ward_heap_list)
@@ -83,6 +109,6 @@ class HierarchicalTree:
             for j in range(i + 1, len(self._all_node)):
                 if self._all_node[j].is_used:
                     continue
-                new_heap_list.append(Pair(i, j, self._all_node[i].ward(self._all_node[j])))
+                new_heap_list.append(Pair(i, j, self._all_node[i].ward(self._all_node[j], self.original_sample)))
         self._ward_heap_list = new_heap_list
         heapify(self._ward_heap_list)

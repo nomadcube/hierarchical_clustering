@@ -1,71 +1,56 @@
-import math
-
 import numpy as np
 
-from ward_heapq import Node, HierarchicalTree, Pair
+from ward_heapq import Pair, Node
 
 
 class TestPair:
-    def test_val(self):
-        a = np.array([1, 2])
-        b = np.array([1, 2])
-        p = Pair(0, 0, math.sqrt(sum((a - b) ** 2)))
-        assert p.val == 0
+    def pytest_funcarg__two_pair(self):
+        pair_1 = 0, 0, 0.0
+        pair_2 = 0, 1, 1.0
+        return pair_1, pair_2
+
+    def test_function(self, two_pair):
+        assert len(two_pair) == 2
+
+    def test_init(self, two_pair):
+        pair = Pair(*two_pair[0])
+        assert isinstance(pair, Pair)
+
+    def test_lt(self, two_pair):
+        pair_1 = Pair(*two_pair[0])
+        pair_2 = Pair(*two_pair[1])
+        assert pair_1 < pair_2
 
 
 class TestNode:
-    def test_init(self):
-        a = np.array([1, 2])
-        b = np.array([1, 2])
-        clu = Node([a, b], 2)
-        assert isinstance(clu.sample_data, np.ndarray)
-        assert clu.sample_data.shape == (2, 2)
+    def pytest_funcarg__original_sample_size(self):
+        return 3
 
-    def test_len(self):
-        a = np.array([1, 2])
-        b = np.array([1, 2])
-        clu = Node([a, b], 2)
-        assert len(clu) == 2
+    def pytest_funcarg__original_sample(self, original_sample_size):
+        return np.array([0, 0, 1, 1, 2, 5]).reshape((original_sample_size, -1))
 
-    def test_variance(self):
-        a = np.array([2, 2])
-        b = np.array([0, 2])
-        clu = Node([a, b], 2)
-        assert clu.variance() == 1.0
-        a_clu = Node([a], 1)
-        assert a_clu.variance() == 0.0
+    def pytest_funcarg__two_node(self):
+        node_0 = Node(0, containing_original_sample_index=[0])
+        node_1 = Node(1, containing_original_sample_index=[1])
+        return node_0, node_1
 
-    def test_union(self):
-        a = np.array([2, 2])
-        b = np.array([0, 2])
-        a_clu = Node([a], 1)
-        b_clu = Node([b], 1)
-        c_clu = a_clu.union(b_clu)
-        assert c_clu.variance() == 1.0
-        assert a_clu.ward(b_clu) == 1.0
+    def test_init(self, two_node, original_sample, original_sample_size):
+        assert isinstance(two_node[0], Node)
+        assert original_sample_size == 3
+        assert original_sample.shape == (3, 2)
 
+    def test_combine(self, two_node):
+        cmb_original_sample_index = two_node[0].combine(two_node[1])
+        assert isinstance(cmb_original_sample_index, list)
+        assert len(cmb_original_sample_index) == 2
+        assert cmb_original_sample_index == [0, 1]
 
-class TestHierarchicalTree:
-    def test_init(self):
-        all_leaf = [np.array([k, k ** 2]) for k in range(3)]
-        ht = HierarchicalTree(all_leaf)
-        assert len(ht) == 2 * 3 - 1
-        assert len(ht._ward_heap_list) == 3
+    def test_variance(self, two_node, original_sample):
+        var_1 = two_node[0].variance(original_sample)
+        var_2 = two_node[1].variance(original_sample)
+        assert var_1 == 0
+        assert var_2 == 0
 
-    def test_node_ward(self):
-        all_data = [np.array([k, k ** 2], dtype='int8') for k in range(3)]
-        ht = HierarchicalTree(all_data)
-        i = 2 + 0
-        j = 2 + 1
-        w = ht._all_node[i].ward(ht._all_node[j])
-        assert isinstance(w, float)
-        assert w == 0.5
-
-    def test_heappop(self):
-        all_data = [np.array([k, k ** 2]) for k in range(3)]
-        ht = HierarchicalTree(all_data)
-        merge_pair = ht._nodes_to_be_merged()
-        assert isinstance(merge_pair, Pair)
-        assert merge_pair.i == 2
-        assert merge_pair.j == 3
-        assert merge_pair.val == 0.5
+    def test_ward(self, two_node, original_sample):
+        ward_pair = two_node[0].ward(two_node[1], original_sample)
+        assert isinstance(ward_pair, Pair)
