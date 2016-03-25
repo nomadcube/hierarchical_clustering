@@ -1,3 +1,5 @@
-# ward_heapq
+# hierarchical_clustering
 
-testing
+#### 简介
+实现基于ward的层次聚类
+
